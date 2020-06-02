@@ -76,6 +76,8 @@ pub fn test_main_basic() {
     let mut cmd = Command::cargo_bin("dust").unwrap();
     let assert = cmd.arg("-c").arg("/tmp/test_dir/").unwrap().stdout;
     let output = str::from_utf8(&assert).unwrap();
+    println!("{:?}", output);
+    println!("{:?}", main_output());
     assert!(output.contains(&main_output()));
 }
 
@@ -136,6 +138,8 @@ pub fn test_main_long_paths() {
         .unwrap()
         .stdout;
     let output = str::from_utf8(&assert).unwrap();
+    println!("{:?}", output);
+    println!("{:?}", main_output_long_paths());
     assert!(output.contains(&main_output_long_paths()));
 }
 
