@@ -1,5 +1,8 @@
 use assert_cmd::Command;
 use std::str;
+use std::sync::Once;
+
+static INIT: Once = Once::new();
 
 mod tests_symlinks;
 
@@ -7,12 +10,34 @@ mod tests_symlinks;
 /// Copy to /tmp dir - we assume that the formatting of the /tmp partition
 /// is consistent. If the tests fail your /tmp filesystem probably differs
 fn copy_test_data(dir: &str) {
+    // First remove the existing directory - just incase it is there and has incorrect data
+    let last_slash = dir.rfind('/').unwrap();
+    let last_part_of_dir = dir.chars().skip(last_slash).collect::<String>();
+    match Command::new("rm")
+        .arg("-rf")
+        .arg("/tmp/".to_owned() + &*last_part_of_dir)
+        .ok()
+    {
+        Ok(_) => {}
+        Err(_) => {}
+    };
     match Command::new("cp").arg("-r").arg(dir).arg("/tmp/").ok() {
         Ok(_) => {}
         Err(err) => {
             eprintln!("Error copying directory {:?}", err);
         }
     };
+}
+
+
+pub fn initialize() {
+    INIT.call_once(|| {
+
+        println!("hello");
+        copy_test_data("src/test_dir");
+        copy_test_data("src/test_dir2");
+        copy_test_data("src/test_dir3");
+    });
 }
 
 // We can at least test the file names are there
@@ -46,8 +71,8 @@ pub fn test_output_no_bars_means_no_excess_spaces() {
 #[cfg_attr(target_os = "windows", ignore)]
 #[test]
 pub fn test_main_basic() {
-    copy_test_data("src/test_dir");
     // -c is no color mode - This makes testing much simpler
+    initialize();
     let mut cmd = Command::cargo_bin("dust").unwrap();
     let assert = cmd.arg("-c").arg("/tmp/test_dir/").unwrap().stdout;
     let output = str::from_utf8(&assert).unwrap();
@@ -57,8 +82,7 @@ pub fn test_main_basic() {
 #[cfg_attr(target_os = "windows", ignore)]
 #[test]
 pub fn test_main_multi_arg() {
-    copy_test_data("src/test_dir");
-
+    initialize();
     let mut cmd = Command::cargo_bin("dust").unwrap();
     let assert = cmd
         .arg("-c")
@@ -103,8 +127,7 @@ fn main_output() -> String {
 #[cfg_attr(target_os = "windows", ignore)]
 #[test]
 pub fn test_main_long_paths() {
-    copy_test_data("src/test_dir");
-
+    initialize();
     let mut cmd = Command::cargo_bin("dust").unwrap();
     let assert = cmd
         .arg("-c")
@@ -148,8 +171,7 @@ fn main_output_long_paths() -> String {
 #[cfg_attr(target_os = "windows", ignore)]
 #[test]
 pub fn test_apparent_size() {
-    copy_test_data("src/test_dir");
-
+    initialize();
     let mut cmd = Command::cargo_bin("dust").unwrap();
     let assert = cmd.arg("-c").arg("-s").arg("src/test_dir").unwrap().stdout;
     let output = str::from_utf8(&assert).unwrap();
@@ -216,7 +238,6 @@ pub fn test_d_flag_works() {
 #[cfg_attr(target_os = "windows", ignore)]
 #[test]
 pub fn test_substring_of_names() {
-    copy_test_data("src/test_dir2");
 
     let mut cmd = Command::cargo_bin("dust").unwrap();
     let output = cmd.arg("-c").arg("/tmp/test_dir2").unwrap().stdout;
@@ -260,8 +281,7 @@ fn no_substring_of_names_output() -> String {
 #[cfg_attr(target_os = "windows", ignore)]
 #[test]
 pub fn test_unicode_directories() {
-    copy_test_data("src/test_dir3");
-
+    initialize();
     let mut cmd = Command::cargo_bin("dust").unwrap();
     let output = cmd.arg("-c").arg("/tmp/test_dir3").unwrap().stdout;
     let output = str::from_utf8(&output).unwrap();
